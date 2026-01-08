@@ -64,8 +64,13 @@ prisma/*.db-journal
 
 # Docker
 docker-compose.override.yml
+
+# SQL files (but NOT Prisma migrations)
 *.sql
+!prisma/migrations/**/migration.sql
 
 # Package manager locks (keep only pnpm-lock.yaml)
 package-lock.json
 yarn.lock
+
+/generated/prisma

@@ -3,6 +3,11 @@ import { INestApplication, ValidationPipe } from '@nestjs/common';
 import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
+import { PostgreSqlContainer, StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
 
 // Helper functions to generate valid test data
 function generateValidCPF(): string {
@@ -18,8 +23,30 @@ function generateValidTelefone(): string {
 describe('Pessoa (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
+  let container: StartedPostgreSqlContainer;
 
   beforeAll(async () => {
+    // Start PostgreSQL container for isolated testing
+    console.log('🐳 Starting PostgreSQL test container...');
+    container = await new PostgreSqlContainer('postgres:16-alpine')
+      .withDatabase('test_db')
+      .withUsername('test_user')
+      .withPassword('test_pass')
+      .start();
+
+    const databaseUrl = container.getConnectionUri();
+    console.log('✅ Test container started');
+
+    // Set DATABASE_URL for this test session
+    process.env.DATABASE_URL = databaseUrl;
+
+    // Run Prisma migrations on the test database
+    console.log('🔄 Running Prisma migrations...');
+    await execAsync('npx prisma migrate deploy', {
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+    });
+    console.log('✅ Migrations completed');
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
@@ -38,28 +65,18 @@ describe('Pessoa (E2E)', () => {
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
-
-    // Clean up any leftover test data before starting
-    await prisma.pessoa.deleteMany({
-      where: {
-        email: {
-          contains: '@e2e-test.com',
-        },
-      },
-    });
-  });
+  }, 120000); // Increase timeout for container startup
 
   afterAll(async () => {
-    // Clean up test data
-    await prisma.pessoa.deleteMany({
-      where: {
-        email: {
-          contains: '@e2e-test.com',
-        },
-      },
-    });
-
+    // Close app connection
     await app.close();
+
+    // Stop and remove the test container
+    if (container) {
+      console.log('🗑️  Stopping test container...');
+      await container.stop();
+      console.log('✅ Test container stopped');
+    }
   });
 
   describe('Complete CRUD flow', () => {

@@ -9,7 +9,7 @@
   "moduleNameMapper": {
     "^src/(.*)$": "<rootDir>/../src/$1"
   },
-  "testTimeout": 30000,
+  "testTimeout": 120000,
   "maxWorkers": 1,
   "forceExit": true,
   "detectOpenHandles": true

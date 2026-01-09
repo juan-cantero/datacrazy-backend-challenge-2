@@ -1,86 +1,86 @@
-# Datacrazy Backend Challenge #2
+# Desafio Datacrazy Backend #2
 
-**NestJS + Prisma ORM + Intelligent Caching**
+**NestJS + Prisma ORM + Cache Inteligente**
 
-This project implements a complete Data Access Object (DAO) pattern with intelligent caching for managing `Pessoa` records.
+Este projeto implementa o padrão completo Data Access Object (DAO) com cache inteligente para gerenciar registros de `Pessoa`.
 
-## Features
+## Funcionalidades
 
-- ✅ **CRUD Operations**: Full Create, Read, Update, Delete support using Prisma API
-- ✅ **Native SQL Queries**: `findByEmail` and `findByTelefone` use native SQL with caching
-- ✅ **Intelligent Caching**: SHA256-based cache keys with 5-minute TTL
-- ✅ **Automatic Cache Eviction**: Cache is automatically cleared on updates/deletes
-- ✅ **Cache Monitoring**: Console logs show HIT/MISS behavior
-- ✅ **REST API**: Full REST endpoints with Swagger/OpenAPI documentation
-- ✅ **Input Validation**: DTO validation using class-validator
+- ✅ **Operações CRUD**: Suporte completo para Create, Read, Update, Delete usando API Prisma
+- ✅ **Consultas SQL Nativas**: `findByEmail` e `findByTelefone` usam SQL nativo com cache
+- ✅ **Cache Inteligente**: Chaves de cache baseadas em SHA256 com TTL de 5 minutos
+- ✅ **Eviction Automática de Cache**: Cache é automaticamente limpo em updates/deletes
+- ✅ **Monitoramento de Cache**: Logs no console mostram comportamento HIT/MISS
+- ✅ **REST API**: Endpoints REST completos com documentação Swagger/OpenAPI
+- ✅ **Validação de Entrada**: Validação de DTOs usando class-validator
 
-## Technologies
+## Tecnologias
 
-- **NestJS** - Progressive Node.js framework
-- **TypeScript** - Type-safe development
-- **Prisma ORM** - Modern database toolkit with PostgreSQL adapter
-- **PostgreSQL** - Relational database (Docker)
-- **cache-manager** - In-memory caching solution
-- **Swagger/OpenAPI** - Interactive API documentation
-- **class-validator** - DTO validation
+- **NestJS** - Framework progressivo Node.js
+- **TypeScript** - Desenvolvimento type-safe
+- **Prisma ORM** - Toolkit moderno de banco de dados com adaptador PostgreSQL
+- **PostgreSQL** - Banco de dados relacional (Docker)
+- **cache-manager** - Solução de cache em memória
+- **Swagger/OpenAPI** - Documentação interativa da API
+- **class-validator** - Validação de DTOs
 
-## Quick Start
+## Início Rápido
 
-### Prerequisites
+### Pré-requisitos
 
 - Node.js 18+
-- Docker and Docker Compose
-- npm or pnpm
+- Docker e Docker Compose
+- npm ou pnpm
 
-### 1. Install Dependencies
+### 1. Instalar Dependências
 
 ```bash
 npm install
 ```
 
-### 2. Start PostgreSQL Database
+### 2. Iniciar Banco de Dados PostgreSQL
 
 ```bash
 docker-compose up -d
 ```
 
-This starts a PostgreSQL 15 container on port 5432.
+Isso inicia um container PostgreSQL 15 na porta 5432.
 
-### 3. Run Database Migrations
+### 3. Executar Migrações do Banco de Dados
 
 ```bash
 npx prisma migrate deploy
 ```
 
-This creates the `pessoas` table with all necessary indexes.
+Isso cria a tabela `pessoas` com todos os índices necessários.
 
-### 4. Start the Application
+### 4. Iniciar a Aplicação
 
 ```bash
 npm run start:dev
 ```
 
-The application will be available at:
+A aplicação estará disponível em:
 - 🚀 **API**: http://localhost:3000
-- 📚 **Swagger Documentation**: http://localhost:3000/api
+- 📚 **Documentação Swagger**: http://localhost:3000/api
 
-## Testing the Application
+## Testando a Aplicação
 
-### Option 1: Interactive Testing with Swagger UI (Recommended)
+### Opção 1: Testes Interativos com Swagger UI (Recomendado)
 
-1. Open http://localhost:3000/api in your browser
-2. You'll see the Swagger UI with all available endpoints
-3. Click on any endpoint to expand it
-4. Click "Try it out" to test the endpoint
-5. Fill in the required fields and click "Execute"
-6. Check the console logs to see cache HIT/MISS behavior
+1. Abra http://localhost:3000/api no seu navegador
+2. Você verá a interface Swagger UI com todos os endpoints disponíveis
+3. Clique em qualquer endpoint para expandi-lo
+4. Clique em "Try it out" para testar o endpoint
+5. Preencha os campos obrigatórios e clique em "Execute"
+6. Verifique os logs do console para ver o comportamento de cache HIT/MISS
 
-**Example: Testing Cache Behavior**
+**Exemplo: Testando Comportamento do Cache**
 
-1. **Create a Pessoa**:
-   - Go to `POST /pessoas`
-   - Click "Try it out"
-   - Use this example data:
+1. **Criar uma Pessoa**:
+   - Vá para `POST /pessoas`
+   - Clique em "Try it out"
+   - Use estes dados de exemplo:
    ```json
    {
      "nome": "João Silva",
@@ -91,49 +91,49 @@ The application will be available at:
      "telefone": "(11) 98765-4321"
    }
    ```
-   - Click "Execute" and copy the returned `id`
+   - Clique em "Execute" e copie o `id` retornado
 
-2. **Test Cache MISS**:
-   - Go to `GET /pessoas/email/{email}`
-   - Enter `joao.silva@example.com`
-   - Click "Execute"
-   - Check the console - you'll see: `❌ Cache MISS for email: joao.silva@example.com`
+2. **Testar Cache MISS**:
+   - Vá para `GET /pessoas/email/{email}`
+   - Digite `joao.silva@example.com`
+   - Clique em "Execute"
+   - Verifique o console - você verá: `❌ Cache MISS for email: joao.silva@example.com`
 
-3. **Test Cache HIT**:
-   - Execute the same request again
-   - Check the console - you'll see: `✅ Cache HIT for email: joao.silva@example.com`
+3. **Testar Cache HIT**:
+   - Execute a mesma requisição novamente
+   - Verifique o console - você verá: `✅ Cache HIT for email: joao.silva@example.com`
 
-4. **Test Cache Eviction**:
-   - Go to `PUT /pessoas/{id}`
-   - Enter the ID from step 1
-   - Update the age to 31
-   - Click "Execute"
-   - Check the console - you'll see: `🗑️ Cache evicted`
+4. **Testar Eviction de Cache**:
+   - Vá para `PUT /pessoas/{id}`
+   - Digite o ID do passo 1
+   - Atualize a idade para 31
+   - Clique em "Execute"
+   - Verifique o console - você verá: `🗑️ Cache evicted`
 
-5. **Verify Cache was Evicted**:
-   - Go back to `GET /pessoas/email/{email}`
-   - Execute the request again
-   - Check the console - you'll see: `❌ Cache MISS` (cache was cleared!)
+5. **Verificar que o Cache foi Removido**:
+   - Volte para `GET /pessoas/email/{email}`
+   - Execute a requisição novamente
+   - Verifique o console - você verá: `❌ Cache MISS` (o cache foi limpo!)
 
-### Option 2: Automated Test Script
+### Opção 2: Script de Testes Automatizados
 
-Run the comprehensive test suite:
+Execute a suíte completa de testes:
 
 ```bash
 npx ts-node src/test-dao.ts
 ```
 
-This executes 13 automated tests covering:
-- CRUD operations
-- Native SQL queries
-- Cache HIT/MISS scenarios
-- Automatic cache eviction
-- Data cleanup
+Isso executa 13 testes automatizados cobrindo:
+- Operações CRUD
+- Consultas SQL nativas
+- Cenários de cache HIT/MISS
+- Eviction automática de cache
+- Limpeza de dados
 
-### Option 3: Manual Testing with curl
+### Opção 3: Testes Manuais com curl
 
 ```bash
-# Create a Pessoa
+# Criar uma Pessoa
 curl -X POST http://localhost:3000/pessoas \
   -H "Content-Type: application/json" \
   -d '{
@@ -145,82 +145,82 @@ curl -X POST http://localhost:3000/pessoas \
     "telefone": "(11) 98765-4321"
   }'
 
-# Find by email (Cache MISS - first time)
+# Buscar por email (Cache MISS - primeira vez)
 curl http://localhost:3000/pessoas/email/joao.silva@example.com
 
-# Find by email again (Cache HIT)
+# Buscar por email novamente (Cache HIT)
 curl http://localhost:3000/pessoas/email/joao.silva@example.com
 
-# Find by telefone (Cache MISS - first time)
+# Buscar por telefone (Cache MISS - primeira vez)
 curl http://localhost:3000/pessoas/telefone/\(11\)%2098765-4321
 
-# Search by name
+# Buscar por nome
 curl "http://localhost:3000/pessoas/search/by-name?nome=João"
 ```
 
-## API Endpoints
+## Endpoints da API
 
-| Method | Endpoint | Description | Caching |
-|--------|----------|-------------|---------|
-| POST | `/pessoas` | Create a new Pessoa | Evicts cache |
-| GET | `/pessoas/:id` | Get Pessoa by ID | No cache |
-| GET | `/pessoas/email/:email` | Find by email (native SQL) | ✅ Cached (5 min TTL) |
-| GET | `/pessoas/telefone/:telefone` | Find by telefone (native SQL) | ✅ Cached (5 min TTL) |
-| GET | `/pessoas/search/by-name?nome=xxx` | Search by name | No cache |
-| PUT | `/pessoas/:id` | Update Pessoa | Evicts cache |
-| DELETE | `/pessoas/:id` | Delete Pessoa | Evicts cache |
+| Método | Endpoint | Descrição | Cache |
+|--------|----------|-----------|-------|
+| POST | `/pessoas` | Criar nova Pessoa | Remove cache |
+| GET | `/pessoas/:id` | Buscar Pessoa por ID | Sem cache |
+| GET | `/pessoas/email/:email` | Buscar por email (SQL nativo) | ✅ Cache (TTL 5 min) |
+| GET | `/pessoas/telefone/:telefone` | Buscar por telefone (SQL nativo) | ✅ Cache (TTL 5 min) |
+| GET | `/pessoas/search/by-name?nome=xxx` | Buscar por nome | Sem cache |
+| PUT | `/pessoas/:id` | Atualizar Pessoa | Remove cache |
+| DELETE | `/pessoas/:id` | Deletar Pessoa | Remove cache |
 
-## Project Structure
+## Estrutura do Projeto
 
 ```
 src/
-├── main.ts                 # Application entry point with Swagger config
-├── app.module.ts          # Root module with cache and database config
+├── main.ts                 # Ponto de entrada da aplicação com config Swagger
+├── app.module.ts          # Módulo raiz com configuração de cache e database
 ├── prisma/
-│   ├── prisma.module.ts   # Global Prisma module
-│   └── prisma.service.ts  # Database connection factory
+│   ├── prisma.module.ts   # Módulo Prisma global
+│   └── prisma.service.ts  # Factory de conexão com banco de dados
 └── pessoa/
-    ├── pessoa.module.ts           # Pessoa module
-    ├── pessoa.dao.ts              # DAO with CRUD and caching logic
-    ├── pessoa.controller.ts       # REST API endpoints
+    ├── pessoa.module.ts           # Módulo Pessoa
+    ├── pessoa.dao.ts              # DAO com CRUD e lógica de cache
+    ├── pessoa.controller.ts       # Endpoints da REST API
     └── dto/
-        ├── create-pessoa.dto.ts   # Create DTO with validation
-        ├── update-pessoa.dto.ts   # Update DTO
-        └── pessoa-response.dto.ts # Response DTO
+        ├── create-pessoa.dto.ts   # DTO de criação com validação
+        ├── update-pessoa.dto.ts   # DTO de atualização
+        └── pessoa-response.dto.ts # DTO de resposta
 ```
 
-## Cache Implementation Details
+## Detalhes da Implementação do Cache
 
-### Cache Strategy
+### Estratégia de Cache
 
-1. **SHA256 Cache Keys**: Generated from `SQL query + parameters`
+1. **Chaves SHA256**: Geradas a partir de `SQL query + parâmetros`
    ```typescript
    const cacheKey = createHash('sha256')
      .update(sql + JSON.stringify(params))
      .digest('hex');
    ```
 
-2. **Time-To-Live (TTL)**: 5 minutes (300 seconds)
-   - Configurable via `CACHE_TTL_SECONDS` env variable
+2. **Time-To-Live (TTL)**: 5 minutos (300 segundos)
+   - Configurável via variável de ambiente `CACHE_TTL_SECONDS`
 
-3. **Automatic Eviction**: Cache is cleared when:
-   - A new Pessoa is created
-   - An existing Pessoa is updated
-   - A Pessoa is deleted
+3. **Eviction Automática**: Cache é limpo quando:
+   - Uma nova Pessoa é criada
+   - Uma Pessoa existente é atualizada
+   - Uma Pessoa é deletada
 
-4. **Cache Storage**: In-memory using `cache-manager`
-   - Fast access
-   - No external dependencies
-   - Max 100 items (configurable via `CACHE_MAX_ITEMS`)
+4. **Armazenamento do Cache**: Em memória usando `cache-manager`
+   - Acesso rápido
+   - Sem dependências externas
+   - Máximo de 100 itens (configurável via `CACHE_MAX_ITEMS`)
 
-### Cache Monitoring
+### Monitoramento do Cache
 
-All cache operations are logged to the console:
-- ✅ `Cache HIT` - Data retrieved from cache
-- ❌ `Cache MISS` - Data fetched from database
-- 🗑️ `Cache evicted` - Cache cleared after write operation
+Todas as operações de cache são registradas no console:
+- ✅ `Cache HIT` - Dados recuperados do cache
+- ❌ `Cache MISS` - Dados buscados do banco de dados
+- 🗑️ `Cache evicted` - Cache limpo após operação de escrita
 
-## Database Schema
+## Schema do Banco de Dados
 
 ```prisma
 model Pessoa {
@@ -241,9 +241,9 @@ model Pessoa {
 }
 ```
 
-## Environment Variables
+## Variáveis de Ambiente
 
-Create a `.env` file (or use `.env.example`):
+Crie um arquivo `.env` (ou use `.env.example`):
 
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/desafio2?schema=public"
@@ -253,82 +253,84 @@ NODE_ENV=development
 PORT=3000
 ```
 
-## Development Commands
+## Comandos de Desenvolvimento
 
 ```bash
-# Install dependencies
+# Instalar dependências
 npm install
 
-# Start PostgreSQL database
+# Iniciar banco de dados PostgreSQL
 docker-compose up -d
 
-# Run migrations
+# Executar migrações
 npx prisma migrate deploy
 
-# Generate Prisma Client
+# Gerar Prisma Client
 npx prisma generate
 
-# Start development server
+# Iniciar servidor de desenvolvimento
 npm run start:dev
 
-# Build for production
+# Build para produção
 npm run build
 
-# Start production server
+# Iniciar servidor de produção
 npm run start:prod
 
-# Run linter
+# Executar linter
 npm run lint
 
-# Run automated tests
+# Executar testes automatizados
 npx ts-node src/test-dao.ts
 
-# View Prisma Studio (database GUI)
+# Visualizar Prisma Studio (GUI do banco de dados)
 npx prisma studio
 ```
 
-## Challenge Requirements Checklist
+## Checklist dos Requisitos do Desafio
 
-✅ **DAO Class**: Implemented in `PessoaDao`
-✅ **CRUD Methods**: `create`, `update`, `delete`, `getById`, `findByName`
-✅ **Native SQL Methods**: `findByEmail`, `findByTelefone` using `$queryRaw`
-✅ **Cache Implementation**: In-memory cache with `cache-manager`
-✅ **SHA256 Cache Keys**: Hash of SQL query + parameters
-✅ **TTL Configuration**: 5-minute cache expiration
-✅ **Automatic Cache Eviction**: On create/update/delete operations
-✅ **Prisma Connection Factory**: Using `PrismaService` with PostgreSQL adapter
-✅ **Database**: PostgreSQL with Docker Compose
+✅ **Classe DAO**: Implementada em `PessoaDao`
+✅ **Métodos CRUD**: `create`, `update`, `delete`, `getById`, `findByName`
+✅ **Métodos SQL Nativos**: `findByEmail`, `findByTelefone` usando `$queryRaw`
+✅ **Implementação de Cache**: Cache em memória com `cache-manager`
+✅ **Chaves SHA256**: Hash da query SQL + parâmetros
+✅ **Configuração TTL**: Expiração de cache de 5 minutos
+✅ **Eviction Automática**: Em operações de create/update/delete
+✅ **Prisma Connection Factory**: Usando `PrismaService` com adaptador PostgreSQL
+✅ **Banco de Dados**: PostgreSQL com Docker Compose
 
-## Architecture Highlights
+## Destaques da Arquitetura
 
-### Separation of Concerns
+### Separação de Responsabilidades
 
-- **DAO Layer** (`pessoa.dao.ts`): Direct database access with caching logic
-- **Controller Layer** (`pessoa.controller.ts`): HTTP request handling and validation
-- **DTO Layer**: Input validation and API documentation
+- **Camada DAO** (`pessoa.dao.ts`): Acesso direto ao banco de dados com lógica de cache
+- **Camada Controller** (`pessoa.controller.ts`): Manipulação de requisições HTTP e validação
+- **Camada DTO**: Validação de entrada e documentação da API
 
-### Design Patterns
+### Padrões de Design
 
-- **DAO Pattern**: Abstraction of data persistence
-- **Dependency Injection**: NestJS IoC container
-- **Repository Pattern**: Prisma ORM as data source abstraction
-- **Factory Pattern**: PrismaService for database connections
+- **Padrão DAO**: Abstração da persistência de dados
+- **Injeção de Dependência**: Container IoC do NestJS
+- **Padrão Repository**: Prisma ORM como abstração de fonte de dados
+- **Padrão Factory**: PrismaService para conexões com banco de dados
 
-### Best Practices
+### Boas Práticas
 
-- ✅ Type safety with TypeScript
-- ✅ Input validation with class-validator
-- ✅ API documentation with Swagger/OpenAPI
-- ✅ Consistent error handling
-- ✅ Clean code structure
-- ✅ Comprehensive logging
-- ✅ Environment configuration
-- ✅ Docker containerization
+- ✅ Segurança de tipos com TypeScript
+- ✅ Validação de entrada com class-validator
+- ✅ Documentação da API com Swagger/OpenAPI
+- ✅ Tratamento consistente de erros
+- ✅ Estrutura de código limpa
+- ✅ Logging abrangente
+- ✅ Configuração por variáveis de ambiente
+- ✅ Containerização com Docker
 
-## License
+## Licença
 
-This is a challenge project for Datacrazy evaluation.
+Este é um projeto de desafio para avaliação da Datacrazy.
 
-## Author
+## Autor
 
-Built with NestJS, Prisma, and intelligent caching strategies.
+**Juan Cantero**
+
+Desenvolvido com NestJS, Prisma e estratégias de cache inteligente.

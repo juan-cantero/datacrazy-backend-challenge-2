@@ -1,13 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, ValidationPipe, NotFoundException } from '@nestjs/common';
 import request from 'supertest';
 import { PessoaController } from './pessoa.controller';
-import { PessoaDao } from './pessoa.dao';
+import { PessoaService } from './pessoa.service';
 import type { Pessoa } from '@prisma/client';
 
 describe('PessoaController (Integration)', () => {
   let app: INestApplication;
-  let pessoaDao: PessoaDao;
+  let pessoaService: PessoaService;
 
   const mockPessoa: Pessoa = {
     id: 'test-uuid-123',
@@ -31,10 +31,10 @@ describe('PessoaController (Integration)', () => {
   };
 
   beforeEach(async () => {
-    // Mock do PessoaDao
-    const mockPessoaDao = {
+    // Mock do PessoaService
+    const mockPessoaService = {
       create: jest.fn(),
-      getById: jest.fn(),
+      findById: jest.fn(),
       findByEmail: jest.fn(),
       findByTelefone: jest.fn(),
       findByName: jest.fn(),
@@ -46,8 +46,8 @@ describe('PessoaController (Integration)', () => {
       controllers: [PessoaController],
       providers: [
         {
-          provide: PessoaDao,
-          useValue: mockPessoaDao,
+          provide: PessoaService,
+          useValue: mockPessoaService,
         },
       ],
     }).compile();
@@ -65,7 +65,7 @@ describe('PessoaController (Integration)', () => {
 
     await app.init();
 
-    pessoaDao = module.get<PessoaDao>(PessoaDao);
+    pessoaService = module.get<PessoaService>(PessoaService);
   });
 
   afterEach(async () => {
@@ -74,7 +74,7 @@ describe('PessoaController (Integration)', () => {
 
   describe('POST /pessoas', () => {
     it('should create a new Pessoa', async () => {
-      jest.spyOn(pessoaDao, 'create').mockResolvedValue(mockPessoa);
+      jest.spyOn(pessoaService, 'create').mockResolvedValue(mockPessoa);
 
       const response = await request(app.getHttpServer())
         .post('/pessoas')
@@ -86,7 +86,7 @@ describe('PessoaController (Integration)', () => {
         nome: mockPessoa.nome,
         email: mockPessoa.email,
       });
-      expect(pessoaDao.create).toHaveBeenCalledWith(
+      expect(pessoaService.create).toHaveBeenCalledWith(
         expect.objectContaining(createPessoaDto),
       );
     });
@@ -159,7 +159,7 @@ describe('PessoaController (Integration)', () => {
 
   describe('GET /pessoas/:id', () => {
     it('should return Pessoa by ID', async () => {
-      jest.spyOn(pessoaDao, 'getById').mockResolvedValue(mockPessoa);
+      jest.spyOn(pessoaService, 'findById').mockResolvedValue(mockPessoa);
 
       const response = await request(app.getHttpServer())
         .get(`/pessoas/${mockPessoa.id}`)
@@ -173,7 +173,9 @@ describe('PessoaController (Integration)', () => {
     });
 
     it('should return 404 if Pessoa not found', async () => {
-      jest.spyOn(pessoaDao, 'getById').mockResolvedValue(null);
+      jest.spyOn(pessoaService, 'findById').mockRejectedValue(
+        new NotFoundException('Pessoa with ID "non-existent-id" not found')
+      );
 
       await request(app.getHttpServer())
         .get('/pessoas/non-existent-id')
@@ -183,7 +185,7 @@ describe('PessoaController (Integration)', () => {
 
   describe('GET /pessoas/email/:email', () => {
     it('should return Pessoa by email', async () => {
-      jest.spyOn(pessoaDao, 'findByEmail').mockResolvedValue(mockPessoa);
+      jest.spyOn(pessoaService, 'findByEmail').mockResolvedValue(mockPessoa);
 
       const response = await request(app.getHttpServer())
         .get(`/pessoas/email/${mockPessoa.email}`)
@@ -193,11 +195,13 @@ describe('PessoaController (Integration)', () => {
         id: mockPessoa.id,
         email: mockPessoa.email,
       });
-      expect(pessoaDao.findByEmail).toHaveBeenCalledWith(mockPessoa.email);
+      expect(pessoaService.findByEmail).toHaveBeenCalledWith(mockPessoa.email);
     });
 
     it('should return 404 if not found', async () => {
-      jest.spyOn(pessoaDao, 'findByEmail').mockResolvedValue(null);
+      jest.spyOn(pessoaService, 'findByEmail').mockRejectedValue(
+        new NotFoundException('Pessoa with email "nonexistent@example.com" not found')
+      );
 
       await request(app.getHttpServer())
         .get('/pessoas/email/nonexistent@example.com')
@@ -207,7 +211,7 @@ describe('PessoaController (Integration)', () => {
 
   describe('GET /pessoas/telefone/:telefone', () => {
     it('should return Pessoa by telefone', async () => {
-      jest.spyOn(pessoaDao, 'findByTelefone').mockResolvedValue(mockPessoa);
+      jest.spyOn(pessoaService, 'findByTelefone').mockResolvedValue(mockPessoa);
 
       const response = await request(app.getHttpServer())
         .get(`/pessoas/telefone/${encodeURIComponent(mockPessoa.telefone)}`)
@@ -220,7 +224,9 @@ describe('PessoaController (Integration)', () => {
     });
 
     it('should return 404 if not found', async () => {
-      jest.spyOn(pessoaDao, 'findByTelefone').mockResolvedValue(null);
+      jest.spyOn(pessoaService, 'findByTelefone').mockRejectedValue(
+        new NotFoundException('Pessoa with telefone "(99) 99999-9999" not found')
+      );
 
       await request(app.getHttpServer())
         .get('/pessoas/telefone/(99)%2099999-9999')
@@ -230,7 +236,7 @@ describe('PessoaController (Integration)', () => {
 
   describe('GET /pessoas/search/by-name', () => {
     it('should return array of Pessoas matching name', async () => {
-      jest.spyOn(pessoaDao, 'findByName').mockResolvedValue([mockPessoa]);
+      jest.spyOn(pessoaService, 'findByName').mockResolvedValue([mockPessoa]);
 
       const response = await request(app.getHttpServer())
         .get('/pessoas/search/by-name?nome=João')
@@ -244,7 +250,7 @@ describe('PessoaController (Integration)', () => {
     });
 
     it('should return empty array if no matches', async () => {
-      jest.spyOn(pessoaDao, 'findByName').mockResolvedValue([]);
+      jest.spyOn(pessoaService, 'findByName').mockResolvedValue([]);
 
       const response = await request(app.getHttpServer())
         .get('/pessoas/search/by-name?nome=NonExistent')
@@ -257,7 +263,7 @@ describe('PessoaController (Integration)', () => {
   describe('PUT /pessoas/:id', () => {
     it('should update Pessoa', async () => {
       const updatedPessoa = { ...mockPessoa, idade: 31 };
-      jest.spyOn(pessoaDao, 'update').mockResolvedValue(updatedPessoa);
+      jest.spyOn(pessoaService, 'update').mockResolvedValue(updatedPessoa);
 
       const response = await request(app.getHttpServer())
         .put(`/pessoas/${mockPessoa.id}`)
@@ -268,7 +274,7 @@ describe('PessoaController (Integration)', () => {
         id: mockPessoa.id,
         idade: 31,
       });
-      expect(pessoaDao.update).toHaveBeenCalledWith(
+      expect(pessoaService.update).toHaveBeenCalledWith(
         mockPessoa.id,
         expect.objectContaining({ idade: 31 }),
       );
@@ -276,8 +282,8 @@ describe('PessoaController (Integration)', () => {
 
     it('should return 404 if Pessoa not found', async () => {
       jest
-        .spyOn(pessoaDao, 'update')
-        .mockRejectedValue(new Error('Not found'));
+        .spyOn(pessoaService, 'update')
+        .mockRejectedValue(new NotFoundException('Pessoa with ID "non-existent-id" not found'));
 
       await request(app.getHttpServer())
         .put('/pessoas/non-existent-id')
@@ -294,7 +300,7 @@ describe('PessoaController (Integration)', () => {
 
     it('should allow partial updates', async () => {
       const updatedPessoa = { ...mockPessoa, nome: 'Maria Silva' };
-      jest.spyOn(pessoaDao, 'update').mockResolvedValue(updatedPessoa);
+      jest.spyOn(pessoaService, 'update').mockResolvedValue(updatedPessoa);
 
       const response = await request(app.getHttpServer())
         .put(`/pessoas/${mockPessoa.id}`)
@@ -307,19 +313,19 @@ describe('PessoaController (Integration)', () => {
 
   describe('DELETE /pessoas/:id', () => {
     it('should delete Pessoa', async () => {
-      jest.spyOn(pessoaDao, 'delete').mockResolvedValue(mockPessoa);
+      jest.spyOn(pessoaService, 'delete').mockResolvedValue(mockPessoa);
 
       await request(app.getHttpServer())
         .delete(`/pessoas/${mockPessoa.id}`)
         .expect(204);
 
-      expect(pessoaDao.delete).toHaveBeenCalledWith(mockPessoa.id);
+      expect(pessoaService.delete).toHaveBeenCalledWith(mockPessoa.id);
     });
 
     it('should return 404 if Pessoa not found', async () => {
       jest
-        .spyOn(pessoaDao, 'delete')
-        .mockRejectedValue(new Error('Not found'));
+        .spyOn(pessoaService, 'delete')
+        .mockRejectedValue(new NotFoundException('Pessoa with ID "non-existent-id" not found'));
 
       await request(app.getHttpServer())
         .delete('/pessoas/non-existent-id')
@@ -329,7 +335,7 @@ describe('PessoaController (Integration)', () => {
 
   describe('Response format', () => {
     it('should include all required fields in response', async () => {
-      jest.spyOn(pessoaDao, 'getById').mockResolvedValue(mockPessoa);
+      jest.spyOn(pessoaService, 'findById').mockResolvedValue(mockPessoa);
 
       const response = await request(app.getHttpServer())
         .get(`/pessoas/${mockPessoa.id}`)
@@ -347,7 +353,7 @@ describe('PessoaController (Integration)', () => {
     });
 
     it('should return proper Content-Type', async () => {
-      jest.spyOn(pessoaDao, 'getById').mockResolvedValue(mockPessoa);
+      jest.spyOn(pessoaService, 'findById').mockResolvedValue(mockPessoa);
 
       await request(app.getHttpServer())
         .get(`/pessoas/${mockPessoa.id}`)

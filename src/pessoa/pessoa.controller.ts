@@ -19,7 +19,7 @@ import {
   ApiQuery,
   ApiBody,
 } from '@nestjs/swagger';
-import { PessoaDao } from './pessoa.dao';
+import { PessoaService } from './pessoa.service';
 import { CreatePessoaDto } from './dto/create-pessoa.dto';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto';
 import { PessoaResponseDto } from './dto/pessoa-response.dto';
@@ -32,11 +32,13 @@ import { PessoaResponseDto } from './dto/pessoa-response.dto';
  * - Search by email (with intelligent caching)
  * - Search by telefone (with intelligent caching)
  * - Search by name
+ *
+ * Architecture: HTTP Request → Controller → Service → (Cache + DAO) → Database
  */
 @ApiTags('Pessoas')
 @Controller('pessoas')
 export class PessoaController {
-  constructor(private readonly pessoaDao: PessoaDao) {}
+  constructor(private readonly pessoaService: PessoaService) {}
 
   /**
    * Create a new Pessoa record.
@@ -58,7 +60,7 @@ export class PessoaController {
     description: 'Invalid input data',
   })
   async create(@Body() createDto: CreatePessoaDto): Promise<PessoaResponseDto> {
-    return this.pessoaDao.create(createDto);
+    return this.pessoaService.create(createDto);
   }
 
   /**
@@ -84,11 +86,7 @@ export class PessoaController {
     description: 'Pessoa not found',
   })
   async getById(@Param('id') id: string): Promise<PessoaResponseDto> {
-    const pessoa = await this.pessoaDao.getById(id);
-    if (!pessoa) {
-      throw new NotFoundException(`Pessoa with ID ${id} not found`);
-    }
-    return pessoa;
+    return this.pessoaService.findById(id);
   }
 
   /**
@@ -115,11 +113,7 @@ export class PessoaController {
     description: 'Pessoa not found',
   })
   async findByEmail(@Param('email') email: string): Promise<PessoaResponseDto> {
-    const pessoa = await this.pessoaDao.findByEmail(email);
-    if (!pessoa) {
-      throw new NotFoundException(`Pessoa with email ${email} not found`);
-    }
-    return pessoa;
+    return this.pessoaService.findByEmail(email);
   }
 
   /**
@@ -148,11 +142,7 @@ export class PessoaController {
   async findByTelefone(
     @Param('telefone') telefone: string,
   ): Promise<PessoaResponseDto> {
-    const pessoa = await this.pessoaDao.findByTelefone(telefone);
-    if (!pessoa) {
-      throw new NotFoundException(`Pessoa with telefone ${telefone} not found`);
-    }
-    return pessoa;
+    return this.pessoaService.findByTelefone(telefone);
   }
 
   /**
@@ -175,7 +165,7 @@ export class PessoaController {
     type: [PessoaResponseDto],
   })
   async findByName(@Query('nome') nome: string): Promise<PessoaResponseDto[]> {
-    return this.pessoaDao.findByName(nome);
+    return this.pessoaService.findByName(nome);
   }
 
   /**
@@ -211,7 +201,7 @@ export class PessoaController {
     @Body() updateDto: UpdatePessoaDto,
   ): Promise<PessoaResponseDto> {
     try {
-      return await this.pessoaDao.update(id, updateDto);
+      return await this.pessoaService.update(id, updateDto);
     } catch {
       throw new NotFoundException(`Pessoa with ID ${id} not found`);
     }
@@ -242,7 +232,7 @@ export class PessoaController {
   })
   async delete(@Param('id') id: string): Promise<void> {
     try {
-      await this.pessoaDao.delete(id);
+      await this.pessoaService.delete(id);
     } catch {
       throw new NotFoundException(`Pessoa with ID ${id} not found`);
     }

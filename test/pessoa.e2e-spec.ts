@@ -4,6 +4,17 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/prisma/prisma.service';
 
+// Helper functions to generate valid test data
+function generateValidCPF(): string {
+  const timestamp = Date.now().toString().slice(-9);
+  return `${timestamp.slice(0, 3)}.${timestamp.slice(3, 6)}.${timestamp.slice(6, 9)}-${Math.floor(Math.random() * 100).toString().padStart(2, '0')}`;
+}
+
+function generateValidTelefone(): string {
+  const timestamp = Date.now().toString().slice(-8);
+  return `(11) 9${timestamp.slice(0, 4)}-${timestamp.slice(4, 8)}`;
+}
+
 describe('Pessoa (E2E)', () => {
   let app: INestApplication;
   let prisma: PrismaService;
@@ -27,6 +38,15 @@ describe('Pessoa (E2E)', () => {
     await app.init();
 
     prisma = app.get<PrismaService>(PrismaService);
+
+    // Clean up any leftover test data before starting
+    await prisma.pessoa.deleteMany({
+      where: {
+        email: {
+          contains: '@e2e-test.com',
+        },
+      },
+    });
   });
 
   afterAll(async () => {
@@ -49,10 +69,10 @@ describe('Pessoa (E2E)', () => {
     const createDto = {
       nome: 'E2E Test User',
       idade: 25,
-      cpf: `${timestamp.toString().slice(-11)}`,
+      cpf: generateValidCPF(),
       endereco: 'Test Address, 123',
       email: `test.${timestamp}@e2e-test.com`,
-      telefone: `(11) 9${timestamp.toString().slice(-8)}`,
+      telefone: generateValidTelefone(),
     };
 
     it('should create a new Pessoa (POST /pessoas)', async () => {
@@ -150,10 +170,10 @@ describe('Pessoa (E2E)', () => {
     const createDto = {
       nome: 'Cache Test User',
       idade: 30,
-      cpf: `${timestamp.toString().slice(-11)}`,
+      cpf: generateValidCPF(),
       endereco: 'Cache Test Address',
       email,
-      telefone: `(11) 9${timestamp.toString().slice(-8)}`,
+      telefone: generateValidTelefone(),
     };
 
     beforeAll(async () => {
@@ -167,8 +187,12 @@ describe('Pessoa (E2E)', () => {
     });
 
     afterAll(async () => {
-      // Clean up
-      await prisma.pessoa.delete({ where: { id: pessoaId } });
+      // Clean up only if pessoaId was set
+      if (pessoaId) {
+        await prisma.pessoa.delete({ where: { id: pessoaId } }).catch(() => {
+          // Ignore if already deleted
+        });
+      }
     });
 
     it('should have cache MISS on first findByEmail', async () => {
@@ -239,7 +263,7 @@ describe('Pessoa (E2E)', () => {
         .send(invalidDto)
         .expect(400);
 
-      expect(response.body.message).toContain('CPF');
+      expect(response.body.message.toString()).toContain('CPF');
     });
 
     it('should return 400 for invalid telefone format', async () => {
@@ -257,7 +281,7 @@ describe('Pessoa (E2E)', () => {
         .send(invalidDto)
         .expect(400);
 
-      expect(response.body.message).toContain('Telefone');
+      expect(response.body.message.toString()).toContain('Telefone');
     });
 
     it('should return 400 for invalid email', async () => {
@@ -275,7 +299,7 @@ describe('Pessoa (E2E)', () => {
         .send(invalidDto)
         .expect(400);
 
-      expect(response.body.message).toContain('email');
+      expect(response.body.message.toString()).toContain('email');
     });
 
     it('should return 400 for idade out of range', async () => {
@@ -293,7 +317,7 @@ describe('Pessoa (E2E)', () => {
         .send(invalidDto)
         .expect(400);
 
-      expect(response.body.message).toContain('idade');
+      expect(response.body.message.toString()).toContain('idade');
     });
 
     it('should return 400 for missing required fields', async () => {
@@ -337,10 +361,10 @@ describe('Pessoa (E2E)', () => {
     const uniqueDto = {
       nome: 'Unique Test User',
       idade: 28,
-      cpf: `${(timestamp + 1).toString().slice(-11)}`,
+      cpf: generateValidCPF(),
       endereco: 'Unique Address',
       email: `unique.${timestamp}@e2e-test.com`,
-      telefone: `(11) 9${(timestamp + 1).toString().slice(-8)}`,
+      telefone: generateValidTelefone(),
     };
 
     let createdId: string;
@@ -355,14 +379,18 @@ describe('Pessoa (E2E)', () => {
     });
 
     afterAll(async () => {
-      await prisma.pessoa.delete({ where: { id: createdId } });
+      if (createdId) {
+        await prisma.pessoa.delete({ where: { id: createdId } }).catch(() => {
+          // Ignore if already deleted
+        });
+      }
     });
 
     it('should reject duplicate CPF', async () => {
       const duplicateDto = {
         ...uniqueDto,
         email: `different.${timestamp}@e2e-test.com`,
-        telefone: `(11) 9${(timestamp + 2).toString().slice(-8)}`,
+        telefone: generateValidTelefone(),
         cpf: uniqueDto.cpf, // Same CPF
       };
 
@@ -376,8 +404,8 @@ describe('Pessoa (E2E)', () => {
     it('should reject duplicate email', async () => {
       const duplicateDto = {
         ...uniqueDto,
-        cpf: `${(timestamp + 3).toString().slice(-11)}`,
-        telefone: `(11) 9${(timestamp + 3).toString().slice(-8)}`,
+        cpf: generateValidCPF(),
+        telefone: generateValidTelefone(),
         email: uniqueDto.email, // Same email
       };
 
@@ -390,7 +418,7 @@ describe('Pessoa (E2E)', () => {
     it('should reject duplicate telefone', async () => {
       const duplicateDto = {
         ...uniqueDto,
-        cpf: `${(timestamp + 4).toString().slice(-11)}`,
+        cpf: generateValidCPF(),
         email: `another.${timestamp}@e2e-test.com`,
         telefone: uniqueDto.telefone, // Same telefone
       };
@@ -408,10 +436,10 @@ describe('Pessoa (E2E)', () => {
       const createDto = {
         nome: 'Search Test Maria Silva',
         idade: 25,
-        cpf: `${timestamp.toString().slice(-11)}`,
+        cpf: generateValidCPF(),
         endereco: 'Search Address',
         email: `search.${timestamp}@e2e-test.com`,
-        telefone: `(11) 9${timestamp.toString().slice(-8)}`,
+        telefone: generateValidTelefone(),
       };
 
       const { body: created } = await request(app.getHttpServer())

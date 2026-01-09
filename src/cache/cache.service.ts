@@ -3,6 +3,8 @@ import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { createHash } from 'crypto';
 import { ICacheProvider } from './interfaces/cache-provider.interface';
+import { LoggerService } from '../common/logger/logger.service';
+import { MetricsService } from '../common/metrics/metrics.service';
 
 /**
  * Cache service that provides abstraction over cache operations.
@@ -10,7 +12,13 @@ import { ICacheProvider } from './interfaces/cache-provider.interface';
  */
 @Injectable()
 export class CacheService implements ICacheProvider {
-  constructor(@Inject(CACHE_MANAGER) private readonly cacheManager: Cache) {}
+  constructor(
+    @Inject(CACHE_MANAGER) private readonly cacheManager: Cache,
+    private readonly logger: LoggerService,
+    private readonly metrics: MetricsService,
+  ) {
+    this.logger.setContext('CacheService');
+  }
 
   /**
    * Generate a deterministic cache key using SHA256
@@ -30,9 +38,11 @@ export class CacheService implements ICacheProvider {
     const value = await this.cacheManager.get<T>(key);
 
     if (value) {
-      console.log(`✅ Cache HIT for key: ${key.substring(0, 16)}...`);
+      this.logger.debug('Cache HIT', 'CacheService', { key: key.substring(0, 16) });
+      this.metrics.incrementCacheHit();
     } else {
-      console.log(`❌ Cache MISS for key: ${key.substring(0, 16)}...`);
+      this.logger.debug('Cache MISS', 'CacheService', { key: key.substring(0, 16) });
+      this.metrics.incrementCacheMiss();
     }
 
     return value || null;
@@ -43,7 +53,10 @@ export class CacheService implements ICacheProvider {
    */
   async set<T>(key: string, value: T, ttl: number): Promise<void> {
     await this.cacheManager.set(key, value, ttl);
-    console.log(`💾 Cache SET for key: ${key.substring(0, 16)}... (TTL: ${ttl}ms)`);
+    this.logger.debug('Cache SET', 'CacheService', {
+      key: key.substring(0, 16),
+      ttl: `${ttl}ms`
+    });
   }
 
   /**
@@ -51,7 +64,7 @@ export class CacheService implements ICacheProvider {
    */
   async del(key: string): Promise<void> {
     await this.cacheManager.del(key);
-    console.log(`🗑️  Cache DEL for key: ${key.substring(0, 16)}...`);
+    this.logger.debug('Cache DEL', 'CacheService', { key: key.substring(0, 16) });
   }
 
   /**
@@ -59,6 +72,6 @@ export class CacheService implements ICacheProvider {
    */
   async reset(): Promise<void> {
     await this.cacheManager.reset();
-    console.log('🧹 Cache RESET - all entries cleared');
+    this.logger.log('Cache RESET - all entries cleared', 'CacheService');
   }
 }

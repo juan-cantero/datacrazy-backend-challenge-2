@@ -2,6 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
 import { CacheService } from './cache.service';
+import { LoggerService } from '../common/logger/logger.service';
+import { MetricsService } from '../common/metrics/metrics.service';
 
 describe('CacheService', () => {
   let service: CacheService;
@@ -21,6 +23,23 @@ describe('CacheService', () => {
         {
           provide: CACHE_MANAGER,
           useValue: mockCacheManager,
+        },
+        {
+          provide: LoggerService,
+          useValue: {
+            setContext: jest.fn(),
+            log: jest.fn(),
+            debug: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+          },
+        },
+        {
+          provide: MetricsService,
+          useValue: {
+            incrementCacheHit: jest.fn(),
+            incrementCacheMiss: jest.fn(),
+          },
         },
       ],
     }).compile();

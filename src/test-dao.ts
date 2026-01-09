@@ -13,7 +13,7 @@ import { PessoaDao } from './pessoa/pessoa.dao';
  */
 async function testDao() {
   console.log('🚀 Starting PessoaDao Test Suite\n');
-  console.log('=' .repeat(60));
+  console.log('='.repeat(60));
 
   const app = await NestFactory.createApplicationContext(AppModule);
   const dao = app.get(PessoaDao);
@@ -64,7 +64,9 @@ async function testDao() {
     // ============================================
     // Test 4: Find by Telefone (1st time - Cache MISS)
     // ============================================
-    console.log('\n📞 Test 4: Find by Telefone (1st time - should be Cache MISS)');
+    console.log(
+      '\n📞 Test 4: Find by Telefone (1st time - should be Cache MISS)',
+    );
     console.log('-'.repeat(60));
 
     const found3 = await dao.findByTelefone(pessoa.telefone);
@@ -73,7 +75,9 @@ async function testDao() {
     // ============================================
     // Test 5: Find by Telefone (2nd time - Cache HIT)
     // ============================================
-    console.log('\n📞 Test 5: Find by Telefone (2nd time - should be Cache HIT)');
+    console.log(
+      '\n📞 Test 5: Find by Telefone (2nd time - should be Cache HIT)',
+    );
     console.log('-'.repeat(60));
 
     const found4 = await dao.findByTelefone(pessoa.telefone);
@@ -122,7 +126,9 @@ async function testDao() {
     console.log('-'.repeat(60));
 
     const foundByName = await dao.findByName('João');
-    console.log(`✅ Found ${foundByName.length} pessoa(s) with name containing "João"`);
+    console.log(
+      `✅ Found ${foundByName.length} pessoa(s) with name containing "João"`,
+    );
     foundByName.forEach((p) => console.log(`   - ${p.nome} (${p.email})`));
 
     // ============================================

@@ -241,7 +241,9 @@ export class PessoaDao {
    * Note: In cache-manager v7, there's no direct method to clear all cache.
    * This method is kept for API compatibility but may not clear all entries.
    */
-  async clearAllCache(): Promise<void> {
-    console.log('🧹 Cache clear requested (individual keys will be evicted on write operations)');
+  clearAllCache(): void {
+    console.log(
+      '🧹 Cache clear requested (individual keys will be evicted on write operations)',
+    );
   }
 }

@@ -40,6 +40,9 @@ describe('Pessoa (E2E)', () => {
     // Set DATABASE_URL for this test session
     process.env.DATABASE_URL = databaseUrl;
 
+    // Enable detailed error messages for E2E testing
+    process.env.EXPOSE_ERROR_DETAILS = 'true';
+
     // Run Prisma migrations on the test database
     console.log('🔄 Running Prisma migrations...');
     await execAsync('npx prisma migrate deploy', {
@@ -415,7 +418,7 @@ describe('Pessoa (E2E)', () => {
       await request(app.getHttpServer())
         .post('/pessoas')
         .send(duplicateDto)
-        .expect(500); // Prisma throws error on unique constraint violation
+        .expect(409); // 409 Conflict - duplicate CPF
     });
 
     it('should reject duplicate email', async () => {
@@ -429,7 +432,7 @@ describe('Pessoa (E2E)', () => {
       await request(app.getHttpServer())
         .post('/pessoas')
         .send(duplicateDto)
-        .expect(500);
+        .expect(409); // 409 Conflict - duplicate email
     });
 
     it('should reject duplicate telefone', async () => {
@@ -443,7 +446,7 @@ describe('Pessoa (E2E)', () => {
       await request(app.getHttpServer())
         .post('/pessoas')
         .send(duplicateDto)
-        .expect(500);
+        .expect(409); // 409 Conflict - duplicate telefone
     });
   });
 

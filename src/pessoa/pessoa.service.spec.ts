@@ -3,6 +3,7 @@ import { NotFoundException } from '@nestjs/common';
 import { PessoaService } from './pessoa.service';
 import { PessoaDao } from './pessoa.dao';
 import { CacheService } from '../cache/cache.service';
+import { LoggerService } from '../common/logger/logger.service';
 import type { Pessoa } from '@prisma/client';
 
 describe('PessoaService', () => {
@@ -46,6 +47,16 @@ describe('PessoaService', () => {
             set: jest.fn(),
             del: jest.fn(),
             reset: jest.fn(),
+          },
+        },
+        {
+          provide: LoggerService,
+          useValue: {
+            setContext: jest.fn(),
+            log: jest.fn(),
+            debug: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
           },
         },
       ],

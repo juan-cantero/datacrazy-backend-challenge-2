@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  NotFoundException,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -23,6 +22,7 @@ import { PessoaService } from './pessoa.service';
 import { CreatePessoaDto } from './dto/create-pessoa.dto';
 import { UpdatePessoaDto } from './dto/update-pessoa.dto';
 import { PessoaResponseDto } from './dto/pessoa-response.dto';
+import { ErrorResponseDto } from '../common/dto/error-response.dto';
 
 /**
  * REST Controller for Pessoa entity.
@@ -57,7 +57,13 @@ export class PessoaController {
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid input data',
+    description: 'Invalid input data (validation errors)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Pessoa with CPF, email, or telefone already exists',
+    type: ErrorResponseDto,
   })
   async create(@Body() createDto: CreatePessoaDto): Promise<PessoaResponseDto> {
     return this.pessoaService.create(createDto);
@@ -84,6 +90,7 @@ export class PessoaController {
   @ApiResponse({
     status: 404,
     description: 'Pessoa not found',
+    type: ErrorResponseDto,
   })
   async getById(@Param('id') id: string): Promise<PessoaResponseDto> {
     return this.pessoaService.findById(id);
@@ -111,6 +118,7 @@ export class PessoaController {
   @ApiResponse({
     status: 404,
     description: 'Pessoa not found',
+    type: ErrorResponseDto,
   })
   async findByEmail(@Param('email') email: string): Promise<PessoaResponseDto> {
     return this.pessoaService.findByEmail(email);
@@ -138,6 +146,7 @@ export class PessoaController {
   @ApiResponse({
     status: 404,
     description: 'Pessoa not found',
+    type: ErrorResponseDto,
   })
   async findByTelefone(
     @Param('telefone') telefone: string,
@@ -191,20 +200,23 @@ export class PessoaController {
   @ApiResponse({
     status: 404,
     description: 'Pessoa not found',
+    type: ErrorResponseDto,
   })
   @ApiResponse({
     status: 400,
-    description: 'Invalid input data',
+    description: 'Invalid input data (validation errors)',
+    type: ErrorResponseDto,
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'Pessoa with CPF, email, or telefone already exists',
+    type: ErrorResponseDto,
   })
   async update(
     @Param('id') id: string,
     @Body() updateDto: UpdatePessoaDto,
   ): Promise<PessoaResponseDto> {
-    try {
-      return await this.pessoaService.update(id, updateDto);
-    } catch {
-      throw new NotFoundException(`Pessoa with ID ${id} not found`);
-    }
+    return this.pessoaService.update(id, updateDto);
   }
 
   /**
@@ -229,12 +241,9 @@ export class PessoaController {
   @ApiResponse({
     status: 404,
     description: 'Pessoa not found',
+    type: ErrorResponseDto,
   })
   async delete(@Param('id') id: string): Promise<void> {
-    try {
-      await this.pessoaService.delete(id);
-    } catch {
-      throw new NotFoundException(`Pessoa with ID ${id} not found`);
-    }
+    await this.pessoaService.delete(id);
   }
 }

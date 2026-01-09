@@ -1,6 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PessoaDao } from './pessoa.dao';
 import { CacheService } from '../cache/cache.service';
+import { LoggerService } from '../common/logger/logger.service';
+import { PessoaNotFoundException, DuplicatePessoaException } from '../common/exceptions/business.exception';
 import type { Pessoa, Prisma } from '@prisma/client';
 
 /**
@@ -21,7 +23,10 @@ export class PessoaService {
   constructor(
     private readonly pessoaDao: PessoaDao,
     private readonly cacheService: CacheService,
-  ) {}
+    private readonly logger: LoggerService,
+  ) {
+    this.logger.setContext('PessoaService');
+  }
 
   // ============================================
   // CRUD Operations
@@ -32,12 +37,25 @@ export class PessoaService {
    * Evicts cache for the newly created email/telefone.
    */
   async create(data: Prisma.PessoaCreateInput): Promise<Pessoa> {
-    const pessoa = await this.pessoaDao.create(data);
+    this.logger.log('Creating new Pessoa', 'PessoaService', { email: data.email });
 
-    // Evict cache for this pessoa
-    await this.evictCacheForPessoa(pessoa);
+    try {
+      const pessoa = await this.pessoaDao.create(data);
 
-    return pessoa;
+      // Evict cache for this pessoa
+      await this.evictCacheForPessoa(pessoa);
+
+      this.logger.log('Pessoa created successfully', 'PessoaService', { id: pessoa.id });
+      return pessoa;
+    } catch (error) {
+      // Handle Prisma unique constraint violations
+      if (error.code === 'P2002') {
+        const field = error.meta?.target?.[0];
+        this.logger.warn('Duplicate Pessoa detected', 'PessoaService', { field, value: data[field] });
+        throw new DuplicatePessoaException(field, data[field]);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -45,12 +63,15 @@ export class PessoaService {
    * No caching for ID lookups (fast primary key queries).
    */
   async findById(id: string): Promise<Pessoa> {
+    this.logger.debug('Finding Pessoa by ID', 'PessoaService', { id });
     const pessoa = await this.pessoaDao.getById(id);
 
     if (!pessoa) {
-      throw new NotFoundException(`Pessoa with ID "${id}" not found`);
+      this.logger.warn('Pessoa not found by ID', 'PessoaService', { id });
+      throw new PessoaNotFoundException(id, 'id');
     }
 
+    this.logger.debug('Pessoa found by ID', 'PessoaService', { id });
     return pessoa;
   }
 
@@ -63,11 +84,13 @@ export class PessoaService {
    * 3. Store result in cache with TTL
    */
   async findByEmail(email: string): Promise<Pessoa> {
+    this.logger.debug('Finding Pessoa by email', 'PessoaService', { email });
     const cacheKey = this.cacheService.generateKey('findByEmail', [email]);
 
     // Try cache first
     const cached = await this.cacheService.get<Pessoa>(cacheKey);
     if (cached) {
+      this.logger.debug('Returning cached Pessoa by email', 'PessoaService', { email });
       return cached;
     }
 
@@ -75,11 +98,13 @@ export class PessoaService {
     const pessoa = await this.pessoaDao.findByEmail(email);
 
     if (!pessoa) {
-      throw new NotFoundException(`Pessoa with email "${email}" not found`);
+      this.logger.warn('Pessoa not found by email', 'PessoaService', { email });
+      throw new PessoaNotFoundException(email, 'email');
     }
 
     // Store in cache
     await this.cacheService.set(cacheKey, pessoa, this.CACHE_TTL);
+    this.logger.debug('Pessoa found by email and cached', 'PessoaService', { email });
 
     return pessoa;
   }
@@ -89,6 +114,7 @@ export class PessoaService {
    * Uses same caching strategy as findByEmail.
    */
   async findByTelefone(telefone: string): Promise<Pessoa> {
+    this.logger.debug('Finding Pessoa by telefone', 'PessoaService', { telefone });
     const cacheKey = this.cacheService.generateKey('findByTelefone', [
       telefone,
     ]);
@@ -96,6 +122,7 @@ export class PessoaService {
     // Try cache first
     const cached = await this.cacheService.get<Pessoa>(cacheKey);
     if (cached) {
+      this.logger.debug('Returning cached Pessoa by telefone', 'PessoaService', { telefone });
       return cached;
     }
 
@@ -103,13 +130,13 @@ export class PessoaService {
     const pessoa = await this.pessoaDao.findByTelefone(telefone);
 
     if (!pessoa) {
-      throw new NotFoundException(
-        `Pessoa with telefone "${telefone}" not found`,
-      );
+      this.logger.warn('Pessoa not found by telefone', 'PessoaService', { telefone });
+      throw new PessoaNotFoundException(telefone, 'telefone');
     }
 
     // Store in cache
     await this.cacheService.set(cacheKey, pessoa, this.CACHE_TTL);
+    this.logger.debug('Pessoa found by telefone and cached', 'PessoaService', { telefone });
 
     return pessoa;
   }
@@ -119,7 +146,10 @@ export class PessoaService {
    * No caching for search queries (results can vary).
    */
   async findByName(nome: string): Promise<Pessoa[]> {
-    return this.pessoaDao.findByName(nome);
+    this.logger.debug('Finding Pessoas by name', 'PessoaService', { nome });
+    const pessoas = await this.pessoaDao.findByName(nome);
+    this.logger.debug('Found Pessoas by name', 'PessoaService', { nome, count: pessoas.length });
+    return pessoas;
   }
 
   /**
@@ -127,21 +157,34 @@ export class PessoaService {
    * Evicts cache for both old and new email/telefone values.
    */
   async update(id: string, data: Prisma.PessoaUpdateInput): Promise<Pessoa> {
+    this.logger.log('Updating Pessoa', 'PessoaService', { id });
     // Get old data to evict old cache keys
     const oldPessoa = await this.pessoaDao.getById(id);
 
     if (!oldPessoa) {
-      throw new NotFoundException(`Pessoa with ID "${id}" not found`);
+      this.logger.warn('Pessoa not found for update', 'PessoaService', { id });
+      throw new PessoaNotFoundException(id, 'id');
     }
 
-    // Update the record
-    const updatedPessoa = await this.pessoaDao.update(id, data);
+    try {
+      // Update the record
+      const updatedPessoa = await this.pessoaDao.update(id, data);
 
-    // Evict cache for both old and new values
-    await this.evictCacheForPessoa(oldPessoa);
-    await this.evictCacheForPessoa(updatedPessoa);
+      // Evict cache for both old and new values
+      await this.evictCacheForPessoa(oldPessoa);
+      await this.evictCacheForPessoa(updatedPessoa);
 
-    return updatedPessoa;
+      this.logger.log('Pessoa updated successfully', 'PessoaService', { id });
+      return updatedPessoa;
+    } catch (error) {
+      // Handle Prisma unique constraint violations
+      if (error.code === 'P2002') {
+        const field = error.meta?.target?.[0];
+        this.logger.warn('Duplicate Pessoa detected on update', 'PessoaService', { field, value: data[field] });
+        throw new DuplicatePessoaException(field, String(data[field]));
+      }
+      throw error;
+    }
   }
 
   /**
@@ -149,11 +192,13 @@ export class PessoaService {
    * Evicts related cache entries before deletion.
    */
   async delete(id: string): Promise<Pessoa> {
+    this.logger.log('Deleting Pessoa', 'PessoaService', { id });
     // Get data before deletion to evict cache
     const pessoa = await this.pessoaDao.getById(id);
 
     if (!pessoa) {
-      throw new NotFoundException(`Pessoa with ID "${id}" not found`);
+      this.logger.warn('Pessoa not found for deletion', 'PessoaService', { id });
+      throw new PessoaNotFoundException(id, 'id');
     }
 
     // Delete the record
@@ -162,6 +207,7 @@ export class PessoaService {
     // Evict cache
     await this.evictCacheForPessoa(pessoa);
 
+    this.logger.log('Pessoa deleted successfully', 'PessoaService', { id });
     return deleted;
   }
 
